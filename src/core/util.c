@@ -861,19 +861,41 @@ int janet_cryptorand(uint8_t *out, size_t n) {
 }
 
 
+#ifdef JANET_APPLE
+#include <malloc/malloc.h>
+#define janet_malloc_size(X) malloc_size((X))
+#elif defined(JANET_LINUX
+#define janet_malloc_size(X) malloc_usable_size((X))
+#endif
+
 /* Alloc function macro fills */
 void *(janet_malloc)(size_t size) {
-    return janet_malloc(size);
+    janet_vm.malloc_stats.alloc_count += 1;
+    janet_vm.malloc_stats.bytes += size;
+    return malloc(size);
 }
 
 void (janet_free)(void *ptr) {
-    janet_free(ptr);
+    janet_vm.malloc_stats.free_count += 1;
+    janet_vm.malloc_stats.bytes -= janet_malloc_size(ptr);
+    free(ptr);
 }
 
 void *(janet_calloc)(size_t nmemb, size_t size) {
-    return janet_calloc(nmemb, size);
+    janet_vm.malloc_stats.alloc_count += 1;
+    janet_vm.malloc_stats.bytes += nmemb * size;
+    return calloc(nmemb, size);
 }
 
 void *(janet_realloc)(void *ptr, size_t size) {
-    return janet_realloc(ptr, size);
+    janet_vm.malloc_stats.alloc_count += 1;
+    janet_vm.malloc_stats.bytes -= janet_malloc_size(ptr);
+    janet_vm.malloc_stats.bytes += size;
+    return realloc(ptr, size);
+}
+
+void janet_malloc_stats() {
+    fprintf(stderr, "Allocs: %zu\n", janet_vm.malloc_stats.alloc_count);
+    fprintf(stderr, "Frees: %zu\n", janet_vm.malloc_stats.free_count);
+    fprintf(stderr, "Bytes (active): %zu\n", janet_vm.malloc_stats.bytes);
 }

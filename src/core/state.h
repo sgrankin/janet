@@ -181,7 +181,11 @@ struct JanetVM {
     struct pollfd *fds;
 #endif
 #endif
-
+    struct {
+        size_t bytes;
+        size_t alloc_count;
+        size_t free_count;
+    } malloc_stats;
 };
 
 extern JANET_THREAD_LOCAL JanetVM janet_vm;
